@@ -1,0 +1,433 @@
+/* Custom styles for the LAN Game Vote application */
+
+/* Smooth scrolling for the page */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Styling for game cards */
+.game-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.game-card .card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Video container styling */
+.video-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    background: #1a1a1a;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.video-container.video-playing {
+    aspect-ratio: 16/9;
+}
+
+/* Aspect ratio container for responsive videos */
+.aspect-ratio-box {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    background: #000;
+    border-radius: 0.5rem;
+}
+
+/* Video thumbnail container */
+.video-thumbnail-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Video thumbnail styles */
+.video-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* YouTube iframe styling */
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #000;
+    z-index: 2;
+}
+
+/* Play button overlay */
+.play-thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.play-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.play-thumbnail:hover .play-icon {
+    background: rgba(220, 38, 38, 0.9);
+    transform: scale(1.1);
+}
+
+.play-thumbnail svg {
+    width: 24px;
+    height: 24px;
+    fill: white;
+    margin-left: 4px;
+}
+
+/* Fallback for games without video */
+.no-video-placeholder {
+    padding: 2rem 1rem;
+    text-align: center;
+    background: #f3f4f6;
+    border-radius: 0.5rem;
+    color: #6b7280;
+}
+
+.no-video-placeholder svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.75rem;
+    color: #9ca3af;
+}
+
+/* Fallback image styling */
+.video-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+/* Hover effects */
+.video-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.video-container a:hover img {
+    transform: scale(1.03);
+}
+
+/* Play button overlay */
+.play-button-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.video-container:hover .play-button-overlay {
+    opacity: 1;
+}
+
+.play-button {
+    background: rgba(255, 255, 255, 0.9);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease, background 0.3s ease;
+    transform: scale(0.9);
+}
+
+.video-container:hover .play-button {
+    transform: scale(1);
+}
+
+.play-button svg {
+    width: 24px;
+    height: 24px;
+    color: #ef4444;
+    margin-left: 4px;
+}
+
+/* Fallback for games without video */
+.no-video-placeholder {
+    padding: 2rem 1rem;
+    text-align: center;
+    background: #f3f4f6;
+    border-radius: 0.5rem;
+}
+
+.no-video-placeholder svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.5rem;
+    color: #9ca3af;
+}
+
+/* Custom radio button styling */
+.vote-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.vote-option {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.vote-option:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.vote-option input[type="radio"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 50%;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.vote-option input[type="radio"]:checked {
+    border-color: #4f46e5;
+}
+
+.vote-option input[type="radio"]:checked::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #4f46e5;
+}
+
+/* Color coding for vote options */
+.vote-option[data-vote="interested"] input[type="radio"]:checked {
+    border-color: #10b981;
+}
+
+.vote-option[data-vote="interested"] input[type="radio"]:checked::before {
+    background-color: #10b981;
+}
+
+.vote-option[data-vote="maybe"] input[type="radio"]:checked {
+    border-color: #f59e0b;
+}
+
+.vote-option[data-vote="maybe"] input[type="radio"]:checked::before {
+    background-color: #f59e0b;
+}
+
+.vote-option[data-vote="not-interested"] input[type="radio"]:checked {
+    border-color: #ef4444;
+}
+
+.vote-option[data-vote="not-interested"] input[type="radio"]:checked::before {
+    background-color: #ef4444;
+}
+
+.vote-option[data-vote=""] {
+    background-color: #f9fafb;
+    color: #6b7280;
+}
+
+.vote-option[data-vote=""] input[type="radio"]:checked {
+    border-color: #9ca3af;
+}
+
+.vote-option[data-vote=""] input[type="radio"]:checked::before {
+    background-color: #9ca3af;
+}
+
+/* Styling for the notification */
+#notification {
+    z-index: 50;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+#notification.block {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Styling for the results table */
+#resultsTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+#resultsTable th, #resultsTable td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+#resultsTable th {
+    font-weight: 600;
+    color: #4b5563;
+    background-color: #f9fafb;
+    position: sticky;
+    top: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    #resultsTable th, #resultsTable td {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+    
+    .vote-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Loading spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c7d2fe;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a5b4fc;
+}
+
+/* Game title styling */
+.game-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.game-meta {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+}
+
+/* Submit button */
+.submit-btn {
+    background-color: #4f46e5;
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-top: 1.5rem;
+}
+
+.submit-btn:hover {
+    background-color: #4338ca;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+/* Results link */
+.results-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: #4f46e5;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.results-link:hover {
+    color: #4338ca;
+    text-decoration: underline;
+}
