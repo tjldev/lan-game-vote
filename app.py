@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from tinydb import TinyDB, Query
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -9,7 +10,7 @@ if os.path.exists('db.json'):
     os.remove('db.json')  # Clear the database on each start for a fresh session
 db = TinyDB('db.json')
 votes_table = db.table('votes')
-players_table = db.table('players')
+users_table = db.table('users')  # Track users and their submissions
 
 # --- Game Data ---
 games = [
@@ -70,15 +71,30 @@ def index():
 
 @app.route('/vote', methods=['POST'])
 def vote():
-    player_id = len(players_table.all()) + 1
-    players_table.insert({'player_id': player_id})
-
-    for game in games:
-        game_id = str(game['id'])
-        vote_status = request.form.get(str(game_id), '').strip()
-        # Only record the vote if a selection was made (not empty string)
-        if vote_status:
-            votes_table.insert({'player_id': player_id, 'game_id': game_id, 'vote': vote_status})
+    data = request.get_json()
+    user_name = data.get('user_name', '').strip()
+    
+    if not user_name:
+        return jsonify({'success': False, 'message': 'Name is required'}), 400
+    
+    # Check if user has already voted
+    User = Query()
+    if users_table.contains(User.name == user_name):
+        return jsonify({'success': False, 'message': 'You have already voted'}), 400
+    
+    # Record the user's vote
+    user_id = len(users_table) + 1
+    users_table.insert({'id': user_id, 'name': user_name, 'voted_at': datetime.utcnow().isoformat()})
+    
+    # Process the votes
+    for game_id, vote_status in data.get('votes', {}).items():
+        if vote_status:  # Only record if a selection was made
+            votes_table.insert({
+                'player_id': user_id,
+                'game_id': game_id,
+                'vote': vote_status,
+                'voted_at': datetime.utcnow().isoformat()
+            })
     
     return jsonify({'success': True, 'message': 'Vote recorded successfully!'})
 
@@ -89,30 +105,74 @@ def results_page():
 @app.route('/api/results')
 def api_results():
     results = {}
+    user_votes = {}
+    
+    # Get all votes
+    all_votes = votes_table.all()
+    
+    # Get all users
+    users = {user['id']: user['name'] for user in users_table.all()}
+    
+    # Initialize results
     for game in games:
         game_id = str(game['id'])
-        Vote = Query()
-        interested_votes = votes_table.count((Vote.game_id == game_id) & (Vote.vote == 'interested'))
-        not_interested_votes = votes_table.count((Vote.game_id == game_id) & (Vote.vote == 'not-interested'))
-        maybe_votes = votes_table.count((Vote.game_id == game_id) & (Vote.vote == 'maybe'))
-        results[game['title']] = {
-            'interested': interested_votes,
-            'not_interested': not_interested_votes,
-            'maybe': maybe_votes
+        results[game_id] = {
+            'title': game['title'],
+            'interested': [],
+            'not_interested': [],
+            'maybe': []
         }
-
-    # Sort for top 10 lists
-    sorted_interested = sorted(results.items(), key=lambda item: item[1]['interested'], reverse=True)
-    sorted_maybe = sorted(results.items(), key=lambda item: item[1]['maybe'], reverse=True)
-
-    top_10_interested = [{'title': game, 'votes': data['interested']} for game, data in sorted_interested[:10]]
-    top_10_maybe = [{'title': game, 'votes': data['maybe']} for game, data in sorted_maybe[:10]]
-
-    return jsonify({
-        'results': results,
-        'top_10_interested': top_10_interested,
-        'top_10_maybe': top_10_maybe
-    })
+    
+    # Populate results with user names
+    for vote in all_votes:
+        user_name = users.get(vote['player_id'], 'Unknown')
+        game_id = str(vote['game_id'])
+        
+        if game_id in results:
+            vote_type = vote['vote']
+            if vote_type in results[game_id]:
+                results[game_id][vote_type].append(user_name)
+    
+    # Format the response
+    formatted_results = {
+        'games': [],
+        'top_interested': [],
+        'top_maybe': [],
+        'total_voters': len(users_table.all())  # Include total number of voters
+    }
+    
+    # Calculate top games
+    interested_counts = []
+    maybe_counts = []
+    
+    for game in games:
+        game_id = str(game['id'])
+        if game_id in results:
+            game_data = results[game_id]
+            interested_count = len(game_data['interested'])
+            maybe_count = len(game_data['maybe'])
+            
+            formatted_results['games'].append({
+                'id': game_id,
+                'title': game['title'],
+                'interested': game_data['interested'],
+                'not_interested': game_data['not_interested'],
+                'maybe': game_data['maybe'],
+                'interested_count': interested_count,
+                'maybe_count': maybe_count
+            })
+            
+            interested_counts.append((game['title'], interested_count))
+            maybe_counts.append((game['title'], maybe_count))
+    
+    # Sort and get top 10
+    interested_counts.sort(key=lambda x: x[1], reverse=True)
+    maybe_counts.sort(key=lambda x: x[1], reverse=True)
+    
+    formatted_results['top_interested'] = [{'title': title, 'count': count} for title, count in interested_counts[:10]]
+    formatted_results['top_maybe'] = [{'title': title, 'count': count} for title, count in maybe_counts[:10]]
+    
+    return jsonify(formatted_results)
 
 if __name__ == '__main__':
     app.run(debug=True)

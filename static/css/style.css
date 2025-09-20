@@ -29,9 +29,9 @@ html {
     position: relative;
     width: 100%;
     margin-bottom: 1.5rem;
-    background: #1a1a1a;
-    border-radius: 0.75rem;
+    background: #000;
     overflow: hidden;
+    border-radius: 0.5rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -40,45 +40,45 @@ html {
     aspect-ratio: 16/9;
 }
 
-/* Aspect ratio container for responsive videos */
+/* Aspect ratio box for 16:9 videos */
 .aspect-ratio-box {
     position: relative;
-    width: 100%;
-    padding-bottom: 56.25%; /* 16:9 aspect ratio */
-    background: #000;
-    border-radius: 0.5rem;
+    padding-top: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    background-color: #000;
 }
 
-/* Video thumbnail container */
-.video-thumbnail-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-/* Video thumbnail styles */
-.video-thumbnail {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-/* YouTube iframe styling */
-.video-container iframe {
+.aspect-ratio-box > * {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     border: none;
-    background: #000;
-    z-index: 2;
 }
 
-/* Play button overlay */
+/* Video thumbnail styles */
+.video-thumbnail-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.video-thumbnail {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.9;
+}
+
+.video-thumbnail:hover {
+    opacity: 1;
+    transform: scale(1.02);
+}
+
 .play-thumbnail {
     position: absolute;
     top: 0;
@@ -89,9 +89,25 @@ html {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 2;
+}
+
+.play-thumbnail:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.play-thumbnail:hover .play-icon {
+    transform: scale(1.1) translateY(-2px);
+    background-color: #ef4444;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
 .play-icon {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    opacity: 0.9;
     width: 60px;
     height: 60px;
     background: rgba(0, 0, 0, 0.7);
@@ -99,9 +115,42 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
 }
 
+.play-thumbnail:hover .play-icon {
+    opacity: 1;
+}
+
+/* Video player styles */
+.video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: #000;
+}
+
+/* Loading state */
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    animation: pulse 1.5s infinite;
+}
+/* Play button styles */
 .play-thumbnail:hover .play-icon {
     background: rgba(220, 38, 38, 0.9);
     transform: scale(1.1);
