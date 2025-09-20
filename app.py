@@ -15,7 +15,7 @@ players_table = db.table('players')
 games = [
     # Format: 'youtube_id' is the video ID from YouTube URL (e.g., 'XHVt2KkSIIU' from 'https://www.youtube.com/watch?v=XHVt2KkSIIU')
     # 7 Days to Die - Using official trailer from Fun Pimps
-    {'id': 1, 'title': '7 Days to Die', 'url': 'https://store.steampowered.com/app/251570/7_Days_to_Die/', 'price': '$44.99', 'max_players': '8', 'youtube_id': 'Nl_9h2e-3fM'},
+    {'id': 1, 'title': '7 Days to Die', 'url': 'https://store.steampowered.com/app/251570/7_Days_to_Die/', 'price': '$20.99', 'max_players': '8', 'youtube_id': 'Nl_9h2e-3fM'},
     {'id': 2, 'title': 'Age of Empires II: Definitive Edition', 'url': 'https://store.steampowered.com/app/813780/Age_of_Empires_II_Definitive_Edition/', 'price': '$34.99', 'max_players': '8', 'youtube_id': '1NhWgW7enMM'},
     {'id': 3, 'title': 'Age of Empires IV: Anniversary Edition', 'url': 'https://store.steampowered.com/app/1466860/Age_of_Empires_IV_Anniversary_Edition/', 'price': '$39.99', 'max_players': '8', 'youtube_id': 'O79KBkO5GtA'},
     {'id': 4, 'title': 'Among Us', 'url': 'https://store.steampowered.com/app/945360/Among_Us/', 'price': '$4.99', 'max_players': '15', 'youtube_id': 'NSJ4cESNQfE'},
