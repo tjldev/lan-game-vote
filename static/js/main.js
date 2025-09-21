@@ -69,9 +69,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const userName = userNameInput ? userNameInput.value.trim() : '';
             if (!userName) {
-                showNotification('Please enter your name', 'error');
+                showNotification('Please select your name', 'error');
                 if (userNameInput) {
-                    setInlineError(userNameInput, 'Please enter your name');
+                    setInlineError(userNameInput, 'Please select your name');
                     userNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     userNameInput.focus();
                 }
@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear inline error when user starts typing a new name
     if (userNameInput) {
         userNameInput.addEventListener('input', () => clearInlineError(userNameInput));
+        userNameInput.addEventListener('change', () => clearInlineError(userNameInput));
     }
 
     // Function to check if an image exists
