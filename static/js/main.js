@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to create YouTube iframe
-    async function createYouTubeIframe(videoId, container) {
+    async function createYouTubeIframe(videoId, container, fallbackUrl = null, fallbackLabel = 'View Game') {
         // Show loading state
         container.innerHTML = `
             <div class="loading-state">
@@ -197,9 +197,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Handle iframe load errors
             iframe.onerror = () => {
-                showError(container, 'Failed to load video. Click to watch on YouTube.', () => {
-                    window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-                });
+                showError(container, 'Video unavailable. Click to view game details.', null, fallbackUrl, fallbackLabel);
+                if (fallbackUrl) {
+                    container.onclick = () => window.open(fallbackUrl, '_blank');
+                }
             };
             
             // Handle successful load
@@ -213,9 +214,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Error creating YouTube iframe:', error);
-            showError(container, 'Video not available. Click to watch on YouTube.', () => {
-                window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-            });
+            showError(container, 'Video unavailable. Click to view game details.', null, fallbackUrl, fallbackLabel);
+            if (fallbackUrl) {
+                container.onclick = () => window.open(fallbackUrl, '_blank');
+            }
         }
     }
 
@@ -315,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         img.className = 'w-full h-full object-contain bg-black';
                         container.innerHTML = '';
                         container.appendChild(img);
-                        container.onclick = () => window.open(`https://store.steampowered.com/app/${steamAppId}`, '_blank');
+                        container.onclick = () => window.open(gameUrl, '_blank');
                         return;
                     }
                 }
@@ -327,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // If we have a YouTube video ID, try to play it
         if (videoId) {
-            createYouTubeIframe(videoId, container).catch(error => {
+            createYouTubeIframe(videoId, container, gameUrl, 'View Game').catch(error => {
                 console.error('Error playing YouTube video:', error);
                 if (specialGames.has(gameTitle)) {
                     // For these titles, guide users to their official page
@@ -335,9 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Also make overlay click go to site
                     container.onclick = () => window.open(gameUrl, '_blank');
                 } else {
-                    showError(container, 'Error loading video. Click to watch on YouTube.', () => {
-                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-                    });
+                    showError(container, 'Video unavailable. Click to view game details.', null, gameUrl, 'View Game');
+                    container.onclick = () => window.open(gameUrl, '_blank');
                 }
             });
             return;
@@ -367,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p>${message}</p>
                 ${hasLink
                     ? `<a class="watch-button" href="${linkHref}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>`
-                    : `<button class="watch-button">Watch on YouTube</button>`
+                    : ``
                 }
             </div>
         `;
