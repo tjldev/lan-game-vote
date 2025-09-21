@@ -52,7 +52,7 @@ games = [
     {'id': 26, 'title': 'Nuclear Nightmare', 'url': 'https://store.steampowered.com/app/2909110/Nuclear_Nightmare/', 'price': '$6.99', 'max_players': '8', 'steam_app_id': '2909110', 'youtube_id': 'vXqWZ8QkUQk'},
     {'id': 27, 'title': 'Overwatch 2', 'url': 'https://store.steampowered.com/app/2357570/Overwatch_2/', 'price': 'FREE', 'max_players': '12', 'steam_app_id': '2357570', 'youtube_id': 'GKXS_YA9s7E'},
     {'id': 28, 'title': 'Overload', 'url': 'https://store.steampowered.com/app/448850/Overload/', 'price': '$29.99', 'max_players': '8', 'steam_app_id': '448850', 'youtube_id': '3f0zVRcMZJc'},
-    {'id': 29, 'title': 'PICO PARK 2', 'url': 'https://store.steampowered.com/app/2644470/PICO_PARK_2/', 'price': 'FREE', 'max_players': '8', 'steam_app_id': '2644470', 'youtube_id': '8QjDm0fFKy4'},
+    {'id': 29, 'title': 'PICO PARK 2', 'url': 'https://store.steampowered.com/app/2644470/PICO_PARK_2/', 'price': '$4.99', 'max_players': '8', 'steam_app_id': '2644470', 'youtube_id': '8QjDm0fFKy4'},
     {'id': 30, 'title': 'Pummel Party', 'url': 'https://store.steampowered.com/app/880940/Pummel_Party/', 'price': '$14.99', 'max_players': '8', 'steam_app_id': '880940', 'youtube_id': '9Kp8LbGJ8sQ'},
     {'id': 31, 'title': 'Renegade X', 'url': 'https://totemarts.games/games/renegade-x/', 'price': 'FREE', 'max_players': '64', 'youtube_id': 'h2X9F8Y6f7E'},
     {'id': 32, 'title': 'Retrocycles', 'url': 'https://store.steampowered.com/app/1306180/Retrocycles/', 'price': 'FREE', 'max_players': '16', 'steam_app_id': '1306180', 'youtube_id': '5XgB5XgB5Xg'},
