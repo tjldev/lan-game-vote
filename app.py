@@ -7,8 +7,17 @@ import requests
 app = Flask(__name__)
 
 # --- Database Setup ---
- # Keep DB persistent across restarts; do not clear on startup
-db = TinyDB('db.json')
+# Keep DB persistent across restarts; do not clear on startup
+# Allow overriding DB path via environment variable for persistent disks in production
+DB_PATH = os.environ.get('DB_PATH', 'db.json')
+try:
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+except Exception:
+    # If we cannot create the directory, TinyDB will likely fail later; but avoid crashing on import
+    pass
+db = TinyDB(DB_PATH)
 votes_table = db.table('votes')
 users_table = db.table('users')  # Track users and their submissions
 
@@ -77,14 +86,22 @@ def vote():
     if not user_name:
         return jsonify({'success': False, 'message': 'Name is required'}), 400
     
-    # Check if user has already voted
-    User = Query()
-    if users_table.contains(User.name == user_name):
-        return jsonify({'success': False, 'message': 'You have already voted'}), 400
-    
-    # Record the user's vote
-    user_id = len(users_table) + 1
-    users_table.insert({'id': user_id, 'name': user_name, 'voted_at': datetime.utcnow().isoformat()})
+    # Upsert user and replace previous votes if they exist
+    UserQuery = Query()
+    existing_user = users_table.get(UserQuery.name == user_name)
+    result_message = 'Vote recorded successfully!'
+    if existing_user:
+        user_id = existing_user['id']
+        # Remove previous votes for this user
+        VoteQuery = Query()
+        votes_table.remove(VoteQuery.player_id == user_id)
+        # Update timestamp on the user
+        users_table.update({'voted_at': datetime.utcnow().isoformat()}, UserQuery.id == user_id)
+        result_message = 'Your previous votes were replaced with your latest selections.'
+    else:
+        # Create a new user
+        user_id = len(users_table) + 1
+        users_table.insert({'id': user_id, 'name': user_name, 'voted_at': datetime.utcnow().isoformat()})
     
     # Process the votes
     for game_id, vote_status in data.get('votes', {}).items():
@@ -96,7 +113,7 @@ def vote():
                 'voted_at': datetime.utcnow().isoformat()
             })
     
-    return jsonify({'success': True, 'message': 'Vote recorded successfully!'})
+    return jsonify({'success': True, 'message': result_message})
 
 @app.route('/results')
 def results_page():
@@ -204,7 +221,12 @@ def steam_media(app_id):
 
 @app.route('/admin/clear_votes', methods=['POST'])
 def admin_clear_votes():
-    """Dangerous: clears all users and votes. Use only in dev/admin context."""
+    """Dangerous: clears all users and votes. Protected by ADMIN_TOKEN env var."""
+    # Simple token-based guard to avoid accidental/unauthorized wipes
+    admin_token = os.environ.get('ADMIN_TOKEN')
+    provided = request.headers.get('X-Admin-Token') or request.args.get('token')
+    if not admin_token or provided != admin_token:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     try:
         votes_table.truncate()
         users_table.truncate()

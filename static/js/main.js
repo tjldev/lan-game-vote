@@ -113,8 +113,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show success message
-                    showNotification('Vote submitted successfully!', 'success');
+                    // Show success message (use server message if provided)
+                    showNotification(data.message || 'Vote submitted successfully!', 'success');
                     
                     // Reset form
                     voteForm.reset();
