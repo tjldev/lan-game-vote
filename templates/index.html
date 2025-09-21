@@ -27,7 +27,6 @@
                     <input type="text" id="userName" name="userName" required
                            class="form-input"
                            placeholder="Enter your name">
-                    <p class="text-sm text-gray-500 mt-1">This will be displayed with your votes</p>
                 </div>
             </div>
             
@@ -50,25 +49,40 @@
                             
                             <!-- Game Media -->
                             <div class="video-container aspect-ratio-box relative group">
-                                {% if game.youtube_id %}
-                                    {% set steam_app_id = game.url.split('/app/')[1].split('/')[0] if 'steampowered.com/app/' in game.url else '' %}
+                                {% if game.steam_app_id or game.youtube_id %}
                                     <div class="video-thumbnail-container w-full h-full relative">
-                                        <img 
-                                            src="https://img.youtube.com/vi/{{ game.youtube_id }}/maxresdefault.jpg" 
-                                            alt="{{ game.title }} thumbnail"
-                                            class="video-thumbnail w-full h-full object-cover"
-                                            onerror="this.onerror=null; this.src='https://img.youtube.com/vi/{{ game.youtube_id }}/hqdefault.jpg'"
-                                        >
+                                        <div class="w-full h-full bg-gray-900 flex items-center justify-center">
+                                            {% if game.steam_app_id %}
+                                                <img 
+                                                    src="https://steamcdn-a.akamaihd.net/steam/apps/{{ game.steam_app_id }}/header.jpg" 
+                                                    alt="{{ game.title }} thumbnail"
+                                                    class="video-thumbnail w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-200"
+                                                    data-fallback-youtube="{{ game.youtube_id or '' }}"
+                                                    data-game-title="{{ game.title }}"
+                                                    loading="lazy"
+                                                >
+                                            {% elif game.youtube_id %}
+                                                <img 
+                                                    src="https://img.youtube.com/vi/{{ game.youtube_id }}/hqdefault.jpg" 
+                                                    alt="{{ game.title }} thumbnail"
+                                                    class="video-thumbnail w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity duration-200"
+                                                    data-game-title="{{ game.title }}"
+                                                    loading="lazy"
+                                                >
+                                            {% endif %}
+                                        </div>
                                         <div 
-                                            class="play-thumbnail absolute inset-0 flex items-center justify-center cursor-pointer bg-black bg-opacity-30 hover:bg-opacity-40 transition-all duration-200"
-                                            data-video-id="{{ game.youtube_id }}"
-                                            data-steam-app-id="{{ steam_app_id }}"
+                                            class="play-thumbnail absolute inset-0 flex items-center justify-center cursor-pointer bg-black bg-opacity-20 hover:bg-opacity-30 transition-all duration-200"
+                                            data-video-id="{{ game.youtube_id or '' }}"
+                                            data-steam-app-id="{{ game.steam_app_id or '' }}"
+                                            data-game-title="{{ game.title }}"
                                         >
-                                            <div class="play-icon bg-black bg-opacity-70 hover:bg-red-600 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110">
-                                                <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                            <div class="play-icon bg-black bg-opacity-70 hover:bg-red-600 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110 group">
+                                                <svg class="w-8 h-8 text-white group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M8 5v14l11-7z"></path>
                                                 </svg>
                                             </div>
+                                            <span class="sr-only">Play {{ game.title }} trailer</span>
                                         </div>
                                     </div>
                                 {% elif 'steam' in game.url %}

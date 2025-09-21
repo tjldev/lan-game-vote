@@ -168,16 +168,6 @@ function displayResults(data) {
 
 // Fetch and display results when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    // Show loading state
-    const resultsContainer = document.getElementById('results');
-    if (resultsContainer) {
-        resultsContainer.innerHTML = `
-            <div class="flex justify-center items-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-            </div>
-        `;
-    }
-    
     // Fetch results
     fetch('/api/results')
         .then(response => {
@@ -186,45 +176,95 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return response.json();
         })
-        .then(data => displayResults(data))
+        .then(data => {
+            console.log('Results data:', data);
+            displayTopResults(data);
+            displayFullResults(data);
+        })
         .catch(error => {
             console.error('Error fetching results:', error);
-            const resultsContainer = document.getElementById('results');
-            if (resultsContainer) {
-                resultsContainer.innerHTML = `
-                    <div class="max-w-md mx-auto bg-red-50 border-l-4 border-red-400 p-4">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm text-red-700">
-                                    Error loading results. Please try again later.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <a href="/" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                                Go back to voting <span aria-hidden="true">&rarr;</span>
-                            </a>
-                        </div>
-                    </div>
-                `;
-            }
+            showError();
         });
 });
-            if (totalVotes === 0) return '';
-            
-            return `
-                <tr class="border-t border-gray-200 hover:bg-gray-50">
-                    <td class="py-3 px-4">${game}</td>
-                    <td class="py-3 px-4 text-center text-green-600 font-medium">${votes.interested}</td>
-                    <td class="py-3 px-4 text-center text-yellow-600 font-medium">${votes.maybe}</td>
-                    <td class="py-3 px-4 text-center text-red-600 font-medium">${votes.not_interested}</td>
-                </tr>
-            `;
-        }).join('');
+
+// Function to display top results
+function displayTopResults(data) {
+    const topInterestedContainer = document.getElementById('topInterested');
+    const topMaybeContainer = document.getElementById('topMaybe');
+    
+    if (topInterestedContainer) {
+        if (data.top_interested && data.top_interested.length > 0) {
+            topInterestedContainer.innerHTML = data.top_interested.map((game, index) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <span class="text-lg font-bold text-indigo-600 mr-3">${index + 1}</span>
+                        <span class="font-medium text-gray-800">${game.title}</span>
+                    </div>
+                    <span class="text-sm font-semibold text-green-600">${game.count} vote${game.count !== 1 ? 's' : ''}</span>
+                </div>
+            `).join('');
+        } else {
+            topInterestedContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No votes yet</p>';
+        }
     }
-});
+    
+    if (topMaybeContainer) {
+        if (data.top_maybe && data.top_maybe.length > 0) {
+            topMaybeContainer.innerHTML = data.top_maybe.map((game, index) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <span class="text-lg font-bold text-yellow-600 mr-3">${index + 1}</span>
+                        <span class="font-medium text-gray-800">${game.title}</span>
+                    </div>
+                    <span class="text-sm font-semibold text-yellow-600">${game.count} vote${game.count !== 1 ? 's' : ''}</span>
+                </div>
+            `).join('');
+        } else {
+            topMaybeContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No votes yet</p>';
+        }
+    }
+}
+
+// Function to display full results table
+function displayFullResults(data) {
+    const tableBody = document.getElementById('resultsTableBody');
+    
+    if (tableBody && data.games) {
+        // Sort games by interested count (descending)
+        const sortedGames = data.games.sort((a, b) => b.interested_count - a.interested_count);
+        
+        tableBody.innerHTML = sortedGames.map(game => `
+            <tr class="border-t border-gray-200 hover:bg-gray-50">
+                <td class="py-3 px-4 font-medium text-gray-900">${game.title}</td>
+                <td class="py-3 px-4 text-center">
+                    <span class="text-green-600 font-semibold">${game.interested_count}</span>
+                    ${game.interested.length > 0 ? `<div class="text-xs text-gray-500 mt-1">${game.interested.join(', ')}</div>` : ''}
+                </td>
+                <td class="py-3 px-4 text-center">
+                    <span class="text-yellow-600 font-semibold">${game.maybe_count}</span>
+                    ${game.maybe.length > 0 ? `<div class="text-xs text-gray-500 mt-1">${game.maybe.join(', ')}</div>` : ''}
+                </td>
+                <td class="py-3 px-4 text-center">
+                    <span class="text-red-600 font-semibold">${game.not_interested.length}</span>
+                    ${game.not_interested.length > 0 ? `<div class="text-xs text-gray-500 mt-1">${game.not_interested.join(', ')}</div>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+// Function to show error state
+function showError() {
+    const containers = ['topInterested', 'topMaybe', 'resultsTableBody'];
+    containers.forEach(id => {
+        const container = document.getElementById(id);
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-red-600">
+                    <p>Error loading results. Please try again later.</p>
+                    <a href="/" class="text-indigo-600 hover:text-indigo-800 underline mt-2 inline-block">Go back to voting</a>
+                </div>
+            `;
+        }
+    });
+}
