@@ -191,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function displayTopResults(data) {
     const topInterestedContainer = document.getElementById('topInterested');
     const topMaybeContainer = document.getElementById('topMaybe');
+    const topEngagementContainer = document.getElementById('topEngagement');
     
     if (topInterestedContainer) {
         if (data.top_interested && data.top_interested.length > 0) {
@@ -221,6 +222,22 @@ function displayTopResults(data) {
             `).join('');
         } else {
             topMaybeContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No votes yet</p>';
+        }
+    }
+
+    if (topEngagementContainer) {
+        if (data.top_engagement && data.top_engagement.length > 0) {
+            topEngagementContainer.innerHTML = data.top_engagement.map((game, index) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <span class="text-lg font-bold text-purple-600 mr-3">${index + 1}</span>
+                        <span class="font-medium text-gray-800">${game.title}</span>
+                    </div>
+                    <span class="text-sm font-semibold text-purple-600">${game.count} vote${game.count !== 1 ? 's' : ''}</span>
+                </div>
+            `).join('');
+        } else {
+            topEngagementContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No votes yet</p>';
         }
     }
 }
@@ -255,7 +272,7 @@ function displayFullResults(data) {
 
 // Function to show error state
 function showError() {
-    const containers = ['topInterested', 'topMaybe', 'resultsTableBody'];
+    const containers = ['topInterested', 'topMaybe', 'topEngagement', 'resultsTableBody'];
     containers.forEach(id => {
         const container = document.getElementById(id);
         if (container) {

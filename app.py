@@ -155,12 +155,14 @@ def api_results():
         'games': [],
         'top_interested': [],
         'top_maybe': [],
+        'top_engagement': [],
         'total_voters': len(users_table.all())  # Include total number of voters
     }
     
     # Calculate top games
     interested_counts = []
     maybe_counts = []
+    engagement_counts = []
     
     for game in games:
         game_id = str(game['id'])
@@ -168,6 +170,7 @@ def api_results():
             game_data = results[game_id]
             interested_count = len(game_data['interested'])
             maybe_count = len(game_data['maybe'])
+            engagement_count = interested_count + maybe_count
             
             formatted_results['games'].append({
                 'id': game_id,
@@ -176,18 +179,26 @@ def api_results():
                 'not_interested': game_data['not_interested'],
                 'maybe': game_data['maybe'],
                 'interested_count': interested_count,
-                'maybe_count': maybe_count
+                'maybe_count': maybe_count,
+                'engagement_count': engagement_count
             })
             
             interested_counts.append((game['title'], interested_count))
             maybe_counts.append((game['title'], maybe_count))
+            engagement_counts.append((game['title'], engagement_count, interested_count, maybe_count))
     
     # Sort and get top 10
     interested_counts.sort(key=lambda x: x[1], reverse=True)
     maybe_counts.sort(key=lambda x: x[1], reverse=True)
+    # For engagement, break ties by interested then maybe
+    engagement_counts.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
     
     formatted_results['top_interested'] = [{'title': title, 'count': count} for title, count in interested_counts[:10]]
     formatted_results['top_maybe'] = [{'title': title, 'count': count} for title, count in maybe_counts[:10]]
+    formatted_results['top_engagement'] = [
+        {'title': title, 'count': engagement}
+        for (title, engagement, _ic, _mc) in engagement_counts[:10]
+    ]
     
     return jsonify(formatted_results)
 

@@ -18,7 +18,7 @@
             </a>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800">Top 10 Most Wanted Games</h2>
                 <div class="space-y-4" id="topInterested">
@@ -32,6 +32,16 @@
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800">Top 10 Maybes</h2>
                 <div class="space-y-4" id="topMaybe">
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Loading results...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Top 10 Combined (Interested + Maybe)</h2>
+                <div class="space-y-4" id="topEngagement">
                     <div class="text-center py-8">
                         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
                         <p class="mt-2 text-gray-600">Loading results...</p>
