@@ -1,8 +1,13 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, make_response
 from tinydb import TinyDB, Query
 import os
 from datetime import datetime
 import requests
+import json
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 
@@ -92,6 +97,158 @@ all_games = get_all_games()
 def index():
     return render_template('index.html', games=all_games)
 
+def compute_formatted_results():
+    """Compute the formatted results used by /api/results and email summaries.
+    Uses only the most recent submission per user.
+    """
+    results = {}
+
+    # Get all votes
+    all_votes = votes_table.all()
+
+    # Get all users and their latest submission numbers (fallback to deriving from votes)
+    users_raw = users_table.all()
+    users = {user['id']: user['name'] for user in users_raw}
+    latest_submission_by_user = {}
+    # Prefer users table 'submission' field if present
+    for u in users_raw:
+        if 'submission' in u:
+            latest_submission_by_user[u['id']] = u.get('submission', 1)
+    # Fallback: if missing, infer from vote rows for that user
+    for v in all_votes:
+        uid = v.get('player_id')
+        sub = v.get('submission', 1)
+        if uid is not None:
+            latest_submission_by_user[uid] = max(latest_submission_by_user.get(uid, 1), sub)
+
+    # Initialize results structure
+    for game in all_games:
+        game_id = str(game['id'])
+        results[game_id] = {
+            'title': game['title'],
+            'interested': [],
+            'not_interested': [],
+            'maybe': []
+        }
+
+    # Populate results using only the most recent submission per user
+    for vote in all_votes:
+        uid = vote.get('player_id')
+        # Only include if this vote belongs to the user's latest submission
+        if uid is None:
+            continue
+        if vote.get('submission', 1) != latest_submission_by_user.get(uid, 1):
+            continue
+        user_name = users.get(uid, 'Unknown')
+        game_id = str(vote['game_id'])
+        if game_id in results:
+            vote_type = vote['vote']
+            if vote_type in results[game_id]:
+                results[game_id][vote_type].append(user_name)
+
+    # Format the response
+    formatted_results = {
+        'games': [],
+        'top_interested': [],
+        'top_maybe': [],
+        'top_engagement': [],
+        'total_voters': len(users_table.all())  # Include total number of voters
+    }
+
+    # Calculate top games
+    interested_counts = []
+    maybe_counts = []
+    engagement_counts = []
+
+    for game in all_games:
+        game_id = str(game['id'])
+        if game_id in results:
+            game_data = results[game_id]
+            interested_count = len(game_data['interested'])
+            maybe_count = len(game_data['maybe'])
+            engagement_count = interested_count + maybe_count
+
+            formatted_results['games'].append({
+                'id': game_id,
+                'title': game['title'],
+                'interested': game_data['interested'],
+                'not_interested': game_data['not_interested'],
+                'maybe': game_data['maybe'],
+                'interested_count': interested_count,
+                'maybe_count': maybe_count,
+                'engagement_count': engagement_count
+            })
+
+            interested_counts.append((game['title'], interested_count))
+            maybe_counts.append((game['title'], maybe_count))
+            engagement_counts.append((game['title'], engagement_count, interested_count, maybe_count))
+
+    # Sort and get top 10
+    interested_counts.sort(key=lambda x: x[1], reverse=True)
+    maybe_counts.sort(key=lambda x: x[1], reverse=True)
+    # For engagement, break ties by interested then maybe
+    engagement_counts.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
+
+    formatted_results['top_interested'] = [{'title': title, 'count': count} for title, count in interested_counts[:10]]
+    formatted_results['top_maybe'] = [{'title': title, 'count': count} for title, count in maybe_counts[:10]]
+    formatted_results['top_engagement'] = [
+        {'title': title, 'count': engagement}
+        for (title, engagement, _ic, _mc) in engagement_counts[:10]
+    ]
+
+    return formatted_results
+
+def send_vote_email(user_name: str, results_summary: dict) -> None:
+    """Send an email notification about a new vote with the current results summary.
+    Requires SMTP_* environment variables. Silently skips if not configured.
+    """
+    smtp_server = os.environ.get('SMTP_SERVER')
+    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+    smtp_username = os.environ.get('SMTP_USERNAME')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    smtp_from = os.environ.get('SMTP_FROM', smtp_username or '')
+    smtp_to = os.environ.get('SMTP_TO', 'thetwistabletrav@gmail.com')
+
+    if not smtp_server or not smtp_username or not smtp_password:
+        # Not configured; skip
+        print('SMTP not configured; skipping vote email.', flush=True)
+        return
+
+    subject = f"LAN Game Vote: {user_name} submitted a vote ({datetime.utcnow().isoformat()} UTC)"
+
+    # Build a simple HTML summary
+    top_int = results_summary.get('top_interested', [])
+    lines_int = ''.join([f"<li>{item['title']}: {item['count']}</li>" for item in top_int])
+    total_voters = results_summary.get('total_voters', 0)
+
+    html = f"""
+    <html>
+      <body>
+        <p><strong>{user_name}</strong> just submitted votes.</p>
+        <p>Total voters: <strong>{total_voters}</strong></p>
+        <h3>Top Interested</h3>
+        <ol>
+          {lines_int}
+        </ol>
+        <p>Full JSON summary attached below:</p>
+        <pre style=\"white-space: pre-wrap; font-family: monospace;\">{json.dumps(results_summary, indent=2)}</pre>
+      </body>
+    </html>
+    """
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = smtp_from
+    msg['To'] = smtp_to
+    part_html = MIMEText(html, 'html')
+    msg.attach(part_html)
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls(context=context)
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_from, [smtp_to], msg.as_string())
+
 @app.route('/vote', methods=['POST'])
 def vote():
     data = request.get_json()
@@ -137,6 +294,13 @@ def vote():
                 'submission': current_submission
             })
     
+    # Send notification email (best-effort)
+    try:
+        summary = compute_formatted_results()
+        send_vote_email(user_name, summary)
+    except Exception as e:
+        print(f"Email notification failed: {e}", flush=True)
+
     return jsonify({'success': True, 'message': result_message})
 
 @app.route('/add_game', methods=['POST'])
@@ -183,101 +347,7 @@ def results_page():
 
 @app.route('/api/results')
 def api_results():
-    results = {}
-    
-    # Get all votes
-    all_votes = votes_table.all()
-    
-    # Get all users and their latest submission numbers (fallback to deriving from votes)
-    users_raw = users_table.all()
-    users = {user['id']: user['name'] for user in users_raw}
-    latest_submission_by_user = {}
-    # Prefer users table 'submission' field if present
-    for u in users_raw:
-        if 'submission' in u:
-            latest_submission_by_user[u['id']] = u.get('submission', 1)
-    # Fallback: if missing, infer from vote rows for that user
-    for v in all_votes:
-        uid = v.get('player_id')
-        sub = v.get('submission', 1)
-        if uid is not None:
-            latest_submission_by_user[uid] = max(latest_submission_by_user.get(uid, 1), sub)
-    
-    # Initialize results structure
-    for game in all_games:
-        game_id = str(game['id'])
-        results[game_id] = {
-            'title': game['title'],
-            'interested': [],
-            'not_interested': [],
-            'maybe': []
-        }
-    
-    # Populate results using only the most recent submission per user
-    for vote in all_votes:
-        uid = vote.get('player_id')
-        # Only include if this vote belongs to the user's latest submission
-        if uid is None:
-            continue
-        if vote.get('submission', 1) != latest_submission_by_user.get(uid, 1):
-            continue
-        user_name = users.get(uid, 'Unknown')
-        game_id = str(vote['game_id'])
-        if game_id in results:
-            vote_type = vote['vote']
-            if vote_type in results[game_id]:
-                results[game_id][vote_type].append(user_name)
-    
-    # Format the response
-    formatted_results = {
-        'games': [],
-        'top_interested': [],
-        'top_maybe': [],
-        'top_engagement': [],
-        'total_voters': len(users_table.all())  # Include total number of voters
-    }
-    
-    # Calculate top games
-    interested_counts = []
-    maybe_counts = []
-    engagement_counts = []
-    
-    for game in all_games:
-        game_id = str(game['id'])
-        if game_id in results:
-            game_data = results[game_id]
-            interested_count = len(game_data['interested'])
-            maybe_count = len(game_data['maybe'])
-            engagement_count = interested_count + maybe_count
-            
-            formatted_results['games'].append({
-                'id': game_id,
-                'title': game['title'],
-                'interested': game_data['interested'],
-                'not_interested': game_data['not_interested'],
-                'maybe': game_data['maybe'],
-                'interested_count': interested_count,
-                'maybe_count': maybe_count,
-                'engagement_count': engagement_count
-            })
-            
-            interested_counts.append((game['title'], interested_count))
-            maybe_counts.append((game['title'], maybe_count))
-            engagement_counts.append((game['title'], engagement_count, interested_count, maybe_count))
-    
-    # Sort and get top 10
-    interested_counts.sort(key=lambda x: x[1], reverse=True)
-    maybe_counts.sort(key=lambda x: x[1], reverse=True)
-    # For engagement, break ties by interested then maybe
-    engagement_counts.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
-    
-    formatted_results['top_interested'] = [{'title': title, 'count': count} for title, count in interested_counts[:10]]
-    formatted_results['top_maybe'] = [{'title': title, 'count': count} for title, count in maybe_counts[:10]]
-    formatted_results['top_engagement'] = [
-        {'title': title, 'count': engagement}
-        for (title, engagement, _ic, _mc) in engagement_counts[:10]
-    ]
-    
+    formatted_results = compute_formatted_results()
     return jsonify(formatted_results)
 
 @app.route('/votehistory')
@@ -299,7 +369,73 @@ def vote_history_page():
         history.sort(key=lambda x: (x['voted_at'] or '', x['submission'], x['user']), reverse=True)
     except Exception:
         pass
-    return render_template('votehistory.html', history=history)
+    # Surface flash-like messages via query params
+    success = request.args.get('success')
+    error = request.args.get('error')
+    return render_template('votehistory.html', history=history, success=success, error=error)
+
+@app.route('/admin/export', methods=['GET'])
+def export_backup():
+    token = request.args.get('token', '')
+    admin_token = os.environ.get('ADMIN_TOKEN')
+    if admin_token and token != admin_token:
+        return "Forbidden", 403
+    backup = {
+        'users': users_table.all(),
+        'votes': votes_table.all(),
+        'submitted_games': submitted_games_table.all(),
+        'exported_at': datetime.utcnow().isoformat()
+    }
+    resp = make_response(json.dumps(backup, indent=2))
+    resp.headers['Content-Type'] = 'application/json'
+    resp.headers['Content-Disposition'] = f"attachment; filename=lan-game-vote-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.json"
+    return resp
+
+@app.route('/admin/import', methods=['POST'])
+def import_backup():
+    token = request.form.get('token', '')
+    admin_token = os.environ.get('ADMIN_TOKEN')
+    if admin_token and token != admin_token:
+        return "Forbidden", 403
+    file = request.files.get('backup_file')
+    if not file:
+        return redirect(url_for('vote_history_page') + '?error=No file uploaded')
+    try:
+        backup = json.load(file.stream)
+    except Exception:
+        return redirect(url_for('vote_history_page') + '?error=Invalid JSON')
+
+    mode = request.form.get('mode', 'replace')
+    users = backup.get('users', [])
+    votes = backup.get('votes', [])
+    submitted_games = backup.get('submitted_games', [])
+
+    if mode == 'replace':
+        users_table.truncate()
+        votes_table.truncate()
+        submitted_games_table.truncate()
+
+    for u in users:
+        try:
+            users_table.insert(u)
+        except Exception:
+            pass
+    for v in votes:
+        try:
+            votes_table.insert(v)
+        except Exception:
+            pass
+    for g in submitted_games:
+        try:
+            submitted_games_table.insert(g)
+        except Exception:
+            pass
+
+    # Refresh games (in case submitted games changed)
+    global all_games
+    all_games = get_all_games()
+
+    return redirect(url_for('vote_history_page') + '?success=Backup imported successfully')
 
 @app.route('/api/steam_media/<app_id>')
 def steam_media(app_id):
