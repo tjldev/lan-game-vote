@@ -207,7 +207,7 @@ def send_vote_email(user_name: str, results_summary: dict) -> None:
     smtp_username = os.environ.get('SMTP_USERNAME')
     smtp_password = os.environ.get('SMTP_PASSWORD')
     smtp_from = os.environ.get('SMTP_FROM', smtp_username or '')
-    smtp_to = os.environ.get('SMTP_TO', 'tjl.webdev@gmail.com')
+    smtp_to = os.environ.get('SMTP_TO')
 
     if not smtp_server or not smtp_username or not smtp_password:
         # Not configured; skip
