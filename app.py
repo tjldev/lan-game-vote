@@ -86,22 +86,31 @@ def vote():
     if not user_name:
         return jsonify({'success': False, 'message': 'Name is required'}), 400
     
-    # Upsert user and replace previous votes if they exist
+    # Upsert user and record a new submission, preserving previous votes (history)
     UserQuery = Query()
     existing_user = users_table.get(UserQuery.name == user_name)
     result_message = 'Vote recorded successfully!'
+    now_iso = datetime.utcnow().isoformat()
     if existing_user:
         user_id = existing_user['id']
-        # Remove previous votes for this user
-        VoteQuery = Query()
-        votes_table.remove(VoteQuery.player_id == user_id)
-        # Update timestamp on the user
-        users_table.update({'voted_at': datetime.utcnow().isoformat()}, UserQuery.id == user_id)
-        result_message = 'Your previous votes were replaced with your latest selections.'
+        # Determine and increment this user's submission counter.
+        # Derive from both users table and any existing vote rows (legacy rows may miss 'submission').
+        try:
+            VoteQuery = Query()
+            prior_votes = votes_table.search(VoteQuery.player_id == user_id)
+            max_sub_from_votes = 0
+            if prior_votes:
+                # Treat legacy votes with missing 'submission' as submission 1
+                max_sub_from_votes = max(v.get('submission', 1) for v in prior_votes)
+        except Exception:
+            max_sub_from_votes = 0
+        current_submission = max(existing_user.get('submission', 0), max_sub_from_votes) + 1
+        users_table.update({'voted_at': now_iso, 'submission': current_submission}, UserQuery.id == user_id)
     else:
-        # Create a new user
+        # Create a new user starting at submission 1
         user_id = len(users_table) + 1
-        users_table.insert({'id': user_id, 'name': user_name, 'voted_at': datetime.utcnow().isoformat()})
+        current_submission = 1
+        users_table.insert({'id': user_id, 'name': user_name, 'voted_at': now_iso, 'submission': current_submission})
     
     # Process the votes
     for game_id, vote_status in data.get('votes', {}).items():
@@ -110,7 +119,8 @@ def vote():
                 'player_id': user_id,
                 'game_id': game_id,
                 'vote': vote_status,
-                'voted_at': datetime.utcnow().isoformat()
+                'voted_at': now_iso,
+                'submission': current_submission
             })
     
     return jsonify({'success': True, 'message': result_message})
@@ -122,15 +132,26 @@ def results_page():
 @app.route('/api/results')
 def api_results():
     results = {}
-    user_votes = {}
     
     # Get all votes
     all_votes = votes_table.all()
     
-    # Get all users
-    users = {user['id']: user['name'] for user in users_table.all()}
+    # Get all users and their latest submission numbers (fallback to deriving from votes)
+    users_raw = users_table.all()
+    users = {user['id']: user['name'] for user in users_raw}
+    latest_submission_by_user = {}
+    # Prefer users table 'submission' field if present
+    for u in users_raw:
+        if 'submission' in u:
+            latest_submission_by_user[u['id']] = u.get('submission', 1)
+    # Fallback: if missing, infer from vote rows for that user
+    for v in all_votes:
+        uid = v.get('player_id')
+        sub = v.get('submission', 1)
+        if uid is not None:
+            latest_submission_by_user[uid] = max(latest_submission_by_user.get(uid, 1), sub)
     
-    # Initialize results
+    # Initialize results structure
     for game in games:
         game_id = str(game['id'])
         results[game_id] = {
@@ -140,11 +161,16 @@ def api_results():
             'maybe': []
         }
     
-    # Populate results with user names
+    # Populate results using only the most recent submission per user
     for vote in all_votes:
-        user_name = users.get(vote['player_id'], 'Unknown')
+        uid = vote.get('player_id')
+        # Only include if this vote belongs to the user's latest submission
+        if uid is None:
+            continue
+        if vote.get('submission', 1) != latest_submission_by_user.get(uid, 1):
+            continue
+        user_name = users.get(uid, 'Unknown')
         game_id = str(vote['game_id'])
-        
         if game_id in results:
             vote_type = vote['vote']
             if vote_type in results[game_id]:
@@ -201,6 +227,27 @@ def api_results():
     ]
     
     return jsonify(formatted_results)
+
+@app.route('/votehistory')
+def vote_history_page():
+    # Build a full history list of all votes, newest first
+    user_lookup = {u['id']: u['name'] for u in users_table.all()}
+    game_lookup = {str(g['id']): g['title'] for g in games}
+    history = []
+    for v in votes_table.all():
+        history.append({
+            'voted_at': v.get('voted_at'),
+            'user': user_lookup.get(v.get('player_id'), 'Unknown'),
+            'game_title': game_lookup.get(str(v.get('game_id')), str(v.get('game_id'))),
+            'vote': v.get('vote'),
+            'submission': v.get('submission', 1),
+        })
+    # Sort by time desc, then by submission, then by user
+    try:
+        history.sort(key=lambda x: (x['voted_at'] or '', x['submission'], x['user']), reverse=True)
+    except Exception:
+        pass
+    return render_template('votehistory.html', history=history)
 
 @app.route('/api/steam_media/<app_id>')
 def steam_media(app_id):
