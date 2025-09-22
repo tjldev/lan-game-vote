@@ -307,7 +307,7 @@ def steam_media(app_id):
     try:
         params = {
             'appids': app_id,
-            'filters': 'movies,screenshots',
+            'filters': 'movies,screenshots,price_overview',
         }
         resp = requests.get(
             'https://store.steampowered.com/api/appdetails',
@@ -321,10 +321,12 @@ def steam_media(app_id):
         if not item or not item.get('success'):
             return jsonify({'success': False, 'error': 'Steam API returned no data'}), 404
         data = item.get('data', {})
+        price_overview = data.get('price_overview', {})
         return jsonify({
             'success': True,
             'movies': data.get('movies', []),
             'screenshots': data.get('screenshots', []),
+            'price_overview': price_overview
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -58,8 +58,12 @@
             
             <div class="mb-8">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">Vote for Games</h2>
-                <div class="mb-6">
+                <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <input type="text" id="gameSearch" placeholder="Search games by title..." class="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-indigo-400">
+                    <label class="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" id="freeGamesOnly" class="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                        <span>Show only free games</span>
+                    </label>
                 </div>
                 <p class="text-gray-600 mb-6">Select your interest level for each game:</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="gamesGrid">
@@ -265,21 +269,50 @@
             moonIcon.classList.toggle('hidden', isDark);
         });
 
-        // Game Search/Filter
+        // Game Search/Filter and Price Fetch
         const gameSearch = document.getElementById('gameSearch');
+        const freeGamesOnly = document.getElementById('freeGamesOnly');
         const gamesGrid = document.getElementById('gamesGrid');
         const gameCards = gamesGrid.querySelectorAll('.game-card');
 
-        gameSearch.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
+        function filterGames() {
+            const query = gameSearch.value.toLowerCase();
+            const showFreeOnly = freeGamesOnly.checked;
             gameCards.forEach(card => {
                 const title = card.querySelector('.game-title a').textContent.toLowerCase();
-                if (title.includes(query)) {
+                const meta = card.querySelector('.game-meta').textContent;
+                const isFree = meta.includes('FREE');
+                const matchesSearch = title.includes(query);
+                const matchesFree = !showFreeOnly || isFree;
+                if (matchesSearch && matchesFree) {
                     card.style.display = '';
                 } else {
                     card.style.display = 'none';
                 }
             });
+        }
+
+        gameSearch.addEventListener('input', filterGames);
+        freeGamesOnly.addEventListener('change', filterGames);
+
+        // Fetch and update Steam prices
+        gameCards.forEach(card => {
+            const steamAppId = card.querySelector('.play-thumbnail')?.dataset.steamAppId;
+            if (steamAppId) {
+                fetch(`/api/steam_media/${steamAppId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.price_overview) {
+                            const price = data.price_overview.final_formatted || data.price_overview.initial_formatted || 'FREE';
+                            const meta = card.querySelector('.game-meta');
+                            if (meta) {
+                                meta.innerHTML = `${price} • ${meta.textContent.split(' • ')[1] || 'N/A players'}`;
+                                filterGames(); // Re-filter after price update
+                            }
+                        }
+                    })
+                    .catch(err => console.log('Price fetch failed', err));
+            }
         });
 
         // Register Service Worker
