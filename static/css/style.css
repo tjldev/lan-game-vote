@@ -664,3 +664,81 @@ html {
     color: #4338ca;
     text-decoration: underline;
 }
+
+/* Dark Mode Styles */
+.dark {
+    background-color: #1f2937;
+    color: #f9fafb;
+}
+
+.dark .bg-gray-50 {
+    background-color: #374151;
+}
+
+.dark .bg-white {
+    background-color: #1f2937;
+}
+
+.dark .text-gray-600 {
+    color: #d1d5db;
+}
+
+.dark .text-gray-800 {
+    color: #f9fafb;
+}
+
+.dark .text-indigo-600 {
+    color: #a78bfa;
+}
+
+.dark .text-indigo-700 {
+    color: #8b5cf6;
+}
+
+.dark .hover\:bg-indigo-700:hover {
+    background-color: #7c3aed;
+}
+
+.dark .bg-indigo-600 {
+    background-color: #4f46e5;
+}
+
+.dark .hover\:bg-indigo-700:hover {
+    background-color: #4338ca;
+}
+
+.dark .border-gray-100 {
+    border-color: #4b5563;
+}
+
+.dark .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.dark .bg-green-500 {
+    background-color: #10b981;
+}
+
+.dark .bg-red-500 {
+    background-color: #ef4444;
+}
+
+.dark .game-card:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Fade-in animation for game cards */
+.game-card {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

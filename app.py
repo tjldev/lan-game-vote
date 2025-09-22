@@ -20,6 +20,7 @@ except Exception:
 db = TinyDB(DB_PATH)
 votes_table = db.table('votes')
 users_table = db.table('users')  # Track users and their submissions
+submitted_games_table = db.table('submitted_games')
 
 # --- Game Data ---
 games = [
@@ -74,9 +75,22 @@ games = [
     {'id': 48, 'title': 'X-MODE', 'url': 'https://store.steampowered.com/app/2265640/XMODE/', 'price': 'FREE', 'max_players': 'N/A', 'steam_app_id': '2265640', 'youtube_id': '5XgB5XgB5Xg'}
 ]
 
+# Merge hardcoded games with user-submitted games
+def get_all_games():
+    all_games = games.copy()
+    submitted = submitted_games_table.all()
+    next_id = len(all_games) + 1
+    for sg in submitted:
+        sg['id'] = next_id
+        all_games.append(sg)
+        next_id += 1
+    return all_games
+
+all_games = get_all_games()
+
 @app.route('/')
 def index():
-    return render_template('index.html', games=games)
+    return render_template('index.html', games=all_games)
 
 @app.route('/vote', methods=['POST'])
 def vote():
@@ -125,6 +139,44 @@ def vote():
     
     return jsonify({'success': True, 'message': result_message})
 
+@app.route('/add_game', methods=['POST'])
+def add_game():
+    title = request.form.get('title', '').strip()
+    url = request.form.get('url', '').strip()
+    price = request.form.get('price', '').strip()
+    max_players = request.form.get('max_players', '').strip()
+    youtube_id = request.form.get('youtube_id', '').strip()
+
+    # Basic validation
+    if not title or not url:
+        return redirect(url_for('index') + '?error=Title and URL are required')
+    if len(title) > 100 or len(url) > 500:
+        return redirect(url_for('index') + '?error=Invalid input lengths')
+
+    # Optional: extract steam_app_id if URL is Steam
+    steam_app_id = None
+    if 'store.steampowered.com/app/' in url:
+        try:
+            steam_app_id = url.split('/app/')[1].split('/')[0]
+        except:
+            pass
+
+    submitted_games_table.insert({
+        'title': title,
+        'url': url,
+        'price': price or 'N/A',
+        'max_players': max_players or 'N/A',
+        'steam_app_id': steam_app_id,
+        'youtube_id': youtube_id or None,
+        'submitted_at': datetime.utcnow().isoformat()
+    })
+
+    # Refresh all_games
+    global all_games
+    all_games = get_all_games()
+
+    return redirect(url_for('index') + '?success=Game added successfully!')
+
 @app.route('/results')
 def results_page():
     return render_template('results.html')
@@ -152,7 +204,7 @@ def api_results():
             latest_submission_by_user[uid] = max(latest_submission_by_user.get(uid, 1), sub)
     
     # Initialize results structure
-    for game in games:
+    for game in all_games:
         game_id = str(game['id'])
         results[game_id] = {
             'title': game['title'],
@@ -190,7 +242,7 @@ def api_results():
     maybe_counts = []
     engagement_counts = []
     
-    for game in games:
+    for game in all_games:
         game_id = str(game['id'])
         if game_id in results:
             game_data = results[game_id]
@@ -232,7 +284,7 @@ def api_results():
 def vote_history_page():
     # Build a full history list of all votes, newest first
     user_lookup = {u['id']: u['name'] for u in users_table.all()}
-    game_lookup = {str(g['id']): g['title'] for g in games}
+    game_lookup = {str(g['id']): g['title'] for g in all_games}
     history = []
     for v in votes_table.all():
         history.append({
