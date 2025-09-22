@@ -277,20 +277,6 @@ def steam_media(app_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/admin/clear_votes', methods=['POST'])
-def admin_clear_votes():
-    """Dangerous: clears all users and votes. Protected by ADMIN_TOKEN env var."""
-    # Simple token-based guard to avoid accidental/unauthorized wipes
-    admin_token = os.environ.get('ADMIN_TOKEN')
-    provided = request.headers.get('X-Admin-Token') or request.args.get('token')
-    if not admin_token or provided != admin_token:
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-    try:
-        votes_table.truncate()
-        users_table.truncate()
-        return jsonify({'success': True, 'message': 'All votes and users cleared.'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
